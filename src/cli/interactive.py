@@ -1,39 +1,38 @@
 """
 Interactive CLI session manager with slash commands.
-Handles user input, command parsing, and simple conversation history.
+Handles user input, command parsing, and multi-session management.
 """
-
-from datetime import datetime
-from typing import Any
-from src.utils.config import Config
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
+from rich.table import Table
+
+from src.sessions.manager import SessionManager
+from src.utils.config import Config
+from src.utils.models import UserSession
 
 
 class InteractiveSession:
     """
-    Manages interactive CLI session with slash commands and natural language queries.
+    Manages interactive CLI with multi-session support and slash commands.
     """
 
     def __init__(self, config: Config):
         self.config = config
         self.console = Console()
-        self.conversation_history: list[dict[str, Any]] = []
+        self.session_manager = SessionManager()
+        self.current_session: UserSession
         self.running = True
-        self.session_title = "BI Chat Session"
-        self.created_at = datetime.now()
+        self._initialize_session()
 
     def run(self) -> None:
         """Main interactive loop."""
-        # Show session info
-        self._show_session_info()
+        # Initialize or load existing session
 
         while self.running:
             try:
-                # Get user input with session-aware prompt
-                prompt_text = f"[{self.session_title}] > "
+                prompt_text = f"[{self.current_session.title}] > "
                 user_input = Prompt.ask(prompt_text).strip()
 
                 if not user_input:
@@ -47,10 +46,10 @@ class InteractiveSession:
                     self._handle_query(user_input)
 
             except KeyboardInterrupt:
-                self.console.print("\n[yellow]👋 Goodbye![/yellow]")
+                self.console.print("\n[yellow]👋 Session saved. Goodbye![/yellow]")
                 break
             except EOFError:
-                self.console.print("\n[yellow]👋 Goodbye![/yellow]")
+                self.console.print("\n[yellow]👋 Session saved. Goodbye![/yellow]")
                 break
             except Exception as e:
                 self.console.print(f"[red]Error: {e}[/red]")
@@ -64,14 +63,18 @@ class InteractiveSession:
 
         if cmd == "help":
             self._show_help()
+        elif cmd == "sessions":
+            self._list_sessions()
+        elif cmd == "new":
+            self._create_new_session(args)
+        elif cmd == "switch":
+            self._switch_session(args)
+        elif cmd == "delete":
+            self._delete_session(args)
         elif cmd == "clear":
             self._clear_history()
         elif cmd == "exit":
             self.running = False
-        elif cmd in ["sessions", "new", "switch", "delete"]:
-            self.console.print(
-                "[red]❌ Multiple sessions not available in this version.[/red]"
-            )
         else:
             self.console.print(
                 f"[red]❌ Unknown command: /{cmd}[/red]\n"
@@ -81,30 +84,44 @@ class InteractiveSession:
     def _handle_query(self, query: str) -> None:
         """Process natural language queries."""
         try:
-            # Add query to history
-            self._add_message("user", query)
+            # Add query to current session
+            self.session_manager.add_message_to_session(
+                self.current_session, "user", query
+            )
 
             self.console.print(f"[blue]🔍 Processing query:[/blue] {query}")
 
             # Generate placeholder response
             response = self._generate_placeholder_response(query)
 
-            # Add response to history
-            self._add_message("assistant", response)
+            # Add response to current session
+            self.session_manager.add_message_to_session(
+                self.current_session, "assistant", response
+            )
 
             self.console.print(f"[green]🤖 Response:[/green] {response}")
 
         except Exception as e:
             self.console.print(f"[red]Query processing error: {e}[/red]")
 
-    def _add_message(self, role: str, content: str) -> None:
-        """Add a message to conversation history."""
-        message = {
-            "timestamp": datetime.now().isoformat(),
-            "role": role,  # 'user' or 'assistant'
-            "content": content,
-        }
-        self.conversation_history.append(message)
+    def _initialize_session(self) -> None:
+        """Initialize session - create default or load most recent."""
+        existing_sessions = self.session_manager.get_all_sessions()
+
+        if existing_sessions:
+            # Load the most recent session
+            self.current_session = existing_sessions[0]
+            self.console.print(
+                f"[dim]Loaded recent session:[/dim] {self.current_session.title}"
+            )
+        else:
+            # Create default session
+            self.current_session = self.session_manager.create_session(
+                "Default Session"
+            )
+            self.console.print("[dim]Created new default session[/dim]")
+
+        self._show_session_info()
 
     def _generate_placeholder_response(self, query: str) -> str:
         """Generate placeholder response until Agent 2 implements CrewAI system."""
@@ -118,10 +135,14 @@ class InteractiveSession:
     def _show_help(self) -> None:
         """Show help information."""
         help_text = """
-[bold cyan]📋 BI Chat CLI Commands (Single Session Mode)[/bold cyan]
+[bold cyan]📋 BI Chat CLI Commands (Multi-Session Mode)[/bold cyan]
 
-[bold yellow]Current Session:[/bold yellow]
-  [green]/clear[/green]                       - Clear conversation history
+[bold yellow]Session Management:[/bold yellow]
+  [green]/sessions[/green]                     - List all sessions
+  [green]/new "Session Name"[/green]          - Create new named session
+  [green]/switch session-id[/green]          - Switch to existing session
+  [green]/delete session-id[/green]           - Delete session by ID
+  [green]/clear[/green]                       - Clear current session history
 
 [bold yellow]System:[/bold yellow]
   [green]/help[/green]                        - Show this help
@@ -136,27 +157,182 @@ Just type your question naturally (no slash prefix):
 [bold yellow]Safety Features:[/bold yellow]
 • Queries automatically limited to last 30 days
 • Read-only access to BigQuery data
-• Simple conversation history in memory
+• Sessions persisted across CLI restarts
 
-[bold red]Note:[/bold red] Multiple session support coming in next version.
+[bold green]✅ Multi-session support enabled![/bold green]
         """.strip()
 
         panel = Panel(help_text, border_style="cyan", padding=(1, 2))
         self.console.print(panel)
 
+    def _list_sessions(self) -> None:
+        """List all available sessions."""
+        sessions = self.session_manager.get_all_sessions()
+
+        if not sessions:
+            self.console.print(
+                '[yellow]📭 No sessions found. Use [bold]/new "Session Name"[/bold] '
+                "to create one.[/yellow]"
+            )
+            return
+
+        table = Table(title="📂 Available Sessions")
+        table.add_column("ID", style="dim")
+        table.add_column("Title", style="bold")
+        table.add_column("Created", style="green")
+        table.add_column("Messages", justify="right", style="cyan")
+        table.add_column("Active", justify="center")
+
+        for session in sessions:
+            is_current = "🟢" if session.id == self.current_session.id else ""
+            table.add_row(
+                str(session.id),
+                session.title,
+                session.created_at.strftime("%Y-%m-%d %H:%M"),
+                str(session.get_message_count()),
+                is_current,
+            )
+
+        self.console.print(table)
+
+    def _create_new_session(self, args: str) -> None:
+        """Create a new session."""
+        if not args.strip():
+            self.console.print(
+                "[red]❌ Please provide a session name: "
+                '[bold]/new "Session Name"[/bold][/red]'
+            )
+            return
+
+        # Remove quotes if present
+        session_name = args.strip().strip("\"'")
+
+        try:
+            new_session = self.session_manager.create_session(session_name)
+            self.current_session = new_session
+            self.console.print(
+                f"[green]✅ Created and switched to new session:[/green] "
+                f"[bold]{session_name}[/bold]"
+            )
+            self._show_session_info()
+        except Exception as e:
+            self.console.print(f"[red]❌ Failed to create session: {e}[/red]")
+
+    def _switch_session(self, args: str) -> None:
+        """Switch to a different session by ID."""
+        if not args.strip():
+            self.console.print(
+                "[yellow]💡 Usage: [bold]/switch session-id[/bold][/yellow]"
+            )
+            self._list_sessions()
+            return
+
+        # Parse session ID
+        try:
+            session_id = int(args.strip())
+        except ValueError:
+            self.console.print(f"[red]❌ Invalid session ID:[/red] {args.strip()}")
+            self.console.print(
+                "[yellow]💡 Session ID must be a number. "
+                "Use [bold]/sessions[/bold] to see available IDs.[/yellow]"
+            )
+            return
+
+        session = self.session_manager.get_session_by_id(session_id)
+
+        if not session:
+            self.console.print(f"[red]❌ Session not found:[/red] {session_id}")
+            return
+
+        if session.id == self.current_session.id:
+            self.console.print("[yellow]⚠️  Already in that session[/yellow]")
+            return
+
+        self.current_session = session
+        self.console.print(
+            f"[green]🔄 Switched to session:[/green] [bold]{session.title}[/bold]"
+        )
+        self._show_session_info()
+
+    def _delete_session(self, args: str) -> None:
+        """Delete a session by ID."""
+        if not args.strip():
+            self.console.print(
+                "[red]❌ Please provide session ID: "
+                "[bold]/delete session-id[/bold][/red]"
+            )
+            return
+
+        session_identifier = args.strip()
+
+        # Check if trying to delete current session
+        try:
+            session_id = int(session_identifier)
+            if session_id == self.current_session.id:
+                self.console.print(
+                    "[red]❌ Cannot delete the current active session. "
+                    "Switch to another session first.[/red]"
+                )
+                return
+        except ValueError:
+            pass
+
+        # Parse and find the session to delete
+        try:
+            session_id = int(session_identifier)
+        except ValueError:
+            self.console.print(
+                f"[red]❌ Invalid session ID:[/red] {session_identifier}"
+            )
+            return
+
+        session_to_delete = self.session_manager.get_session_by_id(session_id)
+        if not session_to_delete:
+            self.console.print(f"[red]❌ Session not found:[/red] {session_id}")
+            return
+
+        # Check if it's the current session
+        if session_to_delete.id == self.current_session.id:
+            self.console.print(
+                "[red]❌ Cannot delete the current active session. "
+                "Switch to another session first.[/red]"
+            )
+            return
+
+        try:
+            if session_to_delete.id is None:
+                self.console.print("[red]❌ Session has no valid ID[/red]")
+                return
+
+            success = self.session_manager.delete_session(session_to_delete.id)
+            if success:
+                self.console.print(
+                    f"[green]✅ Deleted session:[/green] {session_to_delete.title}"
+                )
+            else:
+                self.console.print("[red]❌ Failed to delete session[/red]")
+        except Exception as e:
+            self.console.print(f"[red]❌ Failed to delete session: {e}[/red]")
+
     def _clear_history(self) -> None:
-        """Clear conversation history."""
-        self.conversation_history = []
-        self.console.print("[green]✅ Conversation history cleared[/green]")
+        """Clear current session's conversation history."""
+        try:
+            self.current_session.clear_history()
+            self.session_manager.update_session_activity(self.current_session)
+            self.console.print("[green]✅ Session history cleared[/green]")
+        except Exception as e:
+            self.console.print(f"[red]❌ Failed to clear session: {e}[/red]")
 
     def _show_session_info(self) -> None:
         """Display current session information."""
-        created_str = self.created_at.strftime('%Y-%m-%d %H:%M')
-        panel = Panel(
-            f"[bold]{self.session_title}[/bold]\n"
-            f"Created: {created_str}\n"
-            f"Messages: {len(self.conversation_history)}",
-            title="Current Session",
-            border_style="green",
-        )
-        self.console.print(panel)
+        if self.current_session:
+            created_str = self.current_session.created_at.strftime("%Y-%m-%d %H:%M")
+            panel = Panel(
+                f"[bold]{self.current_session.title}[/bold]\n"
+                f"ID: {self.current_session.id}\n"
+                f"Created: {created_str}\n"
+                f"Messages: {self.current_session.get_message_count()}",
+                title="Current Session",
+                border_style="green",
+            )
+            self.console.print(panel)
