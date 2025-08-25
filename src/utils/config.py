@@ -41,11 +41,11 @@ def load_config(config_path: str | None = None) -> Config:
 
     # Create config from environment variables - Pydantic will validate required fields
     config = Config(
-        google_cloud_project=os.getenv("GOOGLE_CLOUD_PROJECT"),
-        google_application_credentials=os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
-        bigquery_dataset=os.getenv("BIGQUERY_DATASET"),
-        bigquery_table=os.getenv("BIGQUERY_TABLE"),
-        vertex_ai_project=os.getenv("VERTEX_AI_PROJECT"),
+        google_cloud_project=os.getenv("GOOGLE_CLOUD_PROJECT", ""),
+        google_application_credentials=os.getenv("GOOGLE_APPLICATION_CREDENTIALS", ""),
+        bigquery_dataset=os.getenv("BIGQUERY_DATASET", ""),
+        bigquery_table=os.getenv("BIGQUERY_TABLE", ""),
+        vertex_ai_project=os.getenv("VERTEX_AI_PROJECT", ""),
         vertex_ai_location=os.getenv("VERTEX_AI_LOCATION", "us-central1"),
         vertex_ai_model=os.getenv("VERTEX_AI_MODEL", "gemini-2.0-flash"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
@@ -62,5 +62,3 @@ def load_config(config_path: str | None = None) -> Config:
         )
 
     return config
-
-
