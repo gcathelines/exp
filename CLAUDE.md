@@ -19,6 +19,20 @@
 - **Visualization**: Plotly and Matplotlib (both options available, decide later)
 - **Containerization**: Docker preferred
 
+### Enhanced AI Agent Components
+- **Knowledge Base**: ChromaDB for user_transaction context (local, vector-based, easy setup)
+- **Session Management**: SQLite for persistent chat sessions (built-in, reliable, perfect for local storage)
+- **Caching**: Redis for processed insights (cache queries >2s execution time)
+- **Query Safety**: Date filtering (≤30 days) enforced by AI agents
+- **Observability**: JSON logs for agent decision tracking
+
+### ChromaDB Choice Rationale
+- **Local deployment**: No external API dependencies 
+- **Vector similarity**: Perfect for finding related queries and business context
+- **Easy setup**: Pip install, no complex configuration
+- **Extensible**: Can easily migrate to Pinecone later if needed
+- **Cost-effective**: Free for POC, scales with usage
+
 ### Dependencies to Include
 - `google-cloud-aiplatform` (VertexAI)
 - `google-generativeai` (Google GenAI client)
@@ -27,6 +41,10 @@
 - `click`, `typer` (CLI)
 - `plotly`, `matplotlib` (visualization options)
 - `pydantic`, `loguru`, `rich`, `pandas`, `numpy`
+- `chromadb` or `pinecone-client` (knowledge base)
+- `redis` (caching)
+- `sqlite3` (built-in for sessions)
+- `sqlparse` (SQL parsing for date validation)
 
 ## Development Commands
 
@@ -60,11 +78,14 @@ uv run pytest tests/integration/  # lowest priority
 
 ### Code Quality
 ```bash
-# Format code
-uv run black .
+# Format code with ruff
+uv run ruff format .
 
-# Lint code
+# Lint code with ruff
 uv run ruff check .
+
+# Fix auto-fixable issues
+uv run ruff check . --fix
 
 # Type checking
 uv run mypy src/
@@ -76,25 +97,32 @@ uv run mypy src/
 - **Commit format**: Conventional commits (`feat:`, `fix:`, `docs:`, etc.)
 - **PRs**: Create draft PRs, reviewer resolves conflicts
 
-## Agent Assignments
+## Agent Assignments (MVP-Prioritized)
 
-### Agent 1 (CLI + Data Layer)
-**Branches**: `feature/cli-interface`, `feature/data-layer`
-**Responsibilities**:
-- CLI commands using Click/Typer
+### Agent 1 (User Interface + Core Safety)
+**Branches**: `feature/cli-interface`, `feature/sessions`, `feature/safety`
+**MVP Responsibilities**:
+- Interactive CLI with slash commands (/sessions, /switch, /new)
+- Session management (SQLite) - multiple chat windows
+- Date validation and query safety (≤30 days)
 - BigQuery client implementation
 - Authentication system (Google Cloud)
-- Schema discovery service
-- Query execution engine
 
-### Agent 2 (CrewAI + Output)
+### Agent 2 (AI Core + Output)
 **Branches**: `feature/crew-agents`, `feature/output-system`
-**Responsibilities**:
+**MVP Responsibilities**:
 - CrewAI agent configuration
-- Query generation agent (NL → SQL)
+- Query generation agent (NL → SQL with date constraints)
 - Data analysis agent
-- Visualization agent (Plotly/Matplotlib)
+- Basic visualization (Plotly/Matplotlib)
 - Response formatting
+
+### Phase 2 Enhancements (Post-MVP)
+**Shared responsibilities**:
+- Knowledge base implementation (ChromaDB)
+- Processed insights caching (Redis)
+- Enhanced observability logging
+- Advanced safety features
 
 ### Reviewer
 **Responsibilities**:
@@ -105,15 +133,26 @@ uv run mypy src/
 
 ## Architecture Decisions
 
-### CrewAI Agent System
-1. **Query Agent**: Natural language → SQL conversion
-2. **Analysis Agent**: Data processing and insights
+### Enhanced CrewAI Agent System
+1. **Query Agent**: Natural language → SQL conversion with date filtering
+2. **Analysis Agent**: Data processing and insights with caching
 3. **Visualization Agent**: Charts and summaries
+4. **Safety Agent**: Query validation and date range enforcement (≤30 days)
 
-### Error Handling
+### Enhanced System Flow
+```
+User Input → Session Manager → Knowledge Base Query → 
+CrewAI Agents → Date Validator (≤30 days) → Cache Check → 
+BigQuery → Safety Validation → Response + Confidence → 
+Session Storage → Observability Log → User
+```
+
+### Error Handling & Safety
 - **VertexAI failures**: Fail on non-200 responses
 - **MAX_TOKEN errors**: Add TODO for handling (don't fail)
-- **BigQuery**: Read-only queries, validate before execution
+- **BigQuery**: Read-only queries, mandatory date filtering
+- **Date Range Validation**: Auto-add WHERE clauses, reject queries >30 days
+- **Query Safety**: SQL injection prevention, confidence scoring
 
 ### Testing Strategy
 - **Unit tests**: Mock BigQuery/VertexAI with realistic data/responses
@@ -137,26 +176,77 @@ bi-chat-cli/
 
 ## TODOs and Future Enhancements
 
-### High Priority (MVP)
-- [ ] Natural language to SQL conversion
-- [ ] BigQuery query execution
+### Phase 1: MVP (Days 1-2)
+**Agent 1 Focus:**
+- [ ] Interactive CLI with slash commands
+- [ ] Session management (SQLite) - multiple chat windows  
+- [ ] Date validation and query safety (≤30 days)
+- [ ] BigQuery client implementation
+
+**Agent 2 Focus:**
+- [ ] CrewAI agent configuration
+- [ ] Natural language to SQL conversion (with date constraints)
 - [ ] Basic data visualization
-- [ ] CLI interface with interactive mode
+- [ ] Response formatting
+
+**Shared:**
 - [ ] Token usage tracking
+- [ ] Basic error handling
 
-### Medium Priority
-- [ ] Explore BigQuery schema: `data-314708.intermediate_transaction.user_transaction`
-- [ ] Docker configuration
-- [ ] Query caching
+### Phase 2: Enhanced Features (Days 3-4)
+- [ ] Knowledge base for user_transaction context (ChromaDB)
+- [ ] Processed insights caching (Redis, >2s queries)
+- [ ] Enhanced observability logging
+- [ ] Confidence scoring
+- [ ] Advanced query optimization
+
+### Medium Priority (Days 5+)
 - [ ] Enhanced error handling for MAX_TOKEN scenarios
+- [ ] Confidence scoring for responses
+- [ ] Advanced query optimization suggestions
+- [ ] Docker configuration refinement
 
-### Low Priority (Nice to Have)
+### Low Priority (Future Enhancements)
 - [ ] Integration testing
-- [ ] Comprehensive logging system
 - [ ] Google authentication with Okta
 - [ ] User access control system
 - [ ] Advanced visualizations
 - [ ] Multi-format export
+
+## Interactive CLI Design
+
+### Slash Commands (Agent 1 Implementation)
+```bash
+bi-chat  # Start interactive mode
+
+> /help                           # Show all commands
+> /sessions                       # List all sessions  
+> /new "Sales Q3 Analysis"        # Create new named session
+> /switch sales-q3                # Switch to existing session
+> /switch                         # List sessions to switch to
+> /rename "New Session Name"      # Rename current session
+> /delete session-id              # Delete session
+> /clear                          # Clear current session history
+> /export session.json            # Export session data
+> /exit                           # Exit CLI
+
+# Regular queries (no slash prefix)
+> show me revenue trends for last week
+> what are the top user transactions  
+> analyze user behavior patterns
+```
+
+### Session Management Flow
+1. **Default session**: Auto-created on first use
+2. **Named sessions**: User creates with `/new "Analysis Name"`
+3. **Session persistence**: All conversations saved to SQLite
+4. **Context carryover**: Previous questions inform current responses
+5. **Easy switching**: Resume any session anytime
+
+### Date Safety Integration
+- Query Agent automatically enforces ≤30 day limit
+- Reject queries that would generate >30 day date ranges
+- User sees helpful error: "Query would scan too much data. Try: 'last 2 weeks' instead"
 
 ## Interface Contracts
 
@@ -168,6 +258,7 @@ class QueryResult(BaseModel):
     metadata: Dict[str, Any]
     execution_time: float
     row_count: int
+    date_range: Tuple[datetime, datetime]  # Enforced 30-day limit
 
 class TokenUsage(BaseModel):
     prompt_tokens: int
@@ -179,6 +270,25 @@ class AgentResponse(BaseModel):
     content: str
     visualizations: Optional[List[Dict]]
     token_usage: TokenUsage
+    confidence_score: float  # 0.0 - 1.0
+    timestamp: datetime
+    cached: bool
+
+class UserSession(BaseModel):
+    session_id: str
+    user_id: str
+    title: str
+    created_at: datetime
+    last_activity: datetime
+    conversation_history: List[Dict]
+
+class ObservabilityLog(BaseModel):
+    session_id: str
+    agent_name: str
+    decision_reason: str
+    input_query: str
+    output_sql: str
+    confidence: float
     timestamp: datetime
 ```
 
@@ -198,9 +308,10 @@ class AgentResponse(BaseModel):
 
 ### Before Committing
 1. Run tests: `uv run pytest`
-2. Format code: `uv run black .`
-3. Lint: `uv run ruff check .`
-4. Create draft PR with description
+2. Format code: `uv run ruff format .`
+3. Lint and fix: `uv run ruff check . --fix`
+4. Type check: `uv run mypy src/`
+5. Create draft PR with description
 
 ### Integration Points
 - Sync every 4-6 hours between agents
