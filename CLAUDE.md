@@ -173,16 +173,26 @@ Session Storage (Agent 1) → User
 ```
 bi-chat-cli/
 ├── src/
-│   ├── cli/           # CLI interface (Agent 1)
-│   ├── sessions/      # Session management (Agent 1)
-│   ├── agents/        # CrewAI agents + BigQuery + Safety (Agent 2)
-│   ├── output/        # Visualization (Agent 2)
-│   ├── utils/         # Shared models and utilities
-│   ├── cache/         # Phase 2: Redis caching (Agent 2)
-│   └── knowledge/     # Phase 2: ChromaDB (Agent 2)
-├── tests/             # Test suite
-├── docs/              # Documentation
-└── config/            # Configuration
+│   ├── cli/           # ✅ CLI interface (Agent 1) - COMPLETED
+│   │   ├── main.py    # ✅ CLI entry point with Click integration
+│   │   └── interactive.py # ✅ Multi-session interactive CLI with slash commands
+│   ├── sessions/      # ✅ Session management (Agent 1) - COMPLETED
+│   │   ├── storage.py # ✅ SQLite storage layer with CRUD operations
+│   │   └── manager.py # ✅ High-level session management API
+│   ├── agents/        # 🔄 CrewAI agents + BigQuery + Safety (Agent 2) - PENDING
+│   ├── output/        # 🔄 Visualization (Agent 2) - PENDING
+│   ├── utils/         # ✅ Shared models and utilities - COMPLETED
+│   │   ├── models.py  # ✅ Interface contracts (UserSession, AgentResponse, etc.)
+│   │   └── config.py  # ✅ Configuration management
+│   ├── cache/         # 📋 Phase 2: Redis caching (Agent 2)
+│   └── knowledge/     # 📋 Phase 2: ChromaDB (Agent 2)
+├── tests/             # ✅ Test suite - PARTIALLY COMPLETED
+│   └── unit/
+│       ├── sessions/  # ✅ Comprehensive session tests (storage + manager)
+│       ├── cli/       # ❌ Missing CLI tests
+│       └── utils/     # 🔄 Partial utils tests
+├── docs/              # ✅ Documentation
+└── config/            # ✅ Configuration
 
 REMOVED DIRECTORIES:
 ├── src/data/          # ❌ Moved to Agent 2's agents/tools.py
@@ -192,11 +202,21 @@ REMOVED DIRECTORIES:
 ## TODOs and Future Enhancements
 
 ### Phase 1: MVP (Days 1-2) - UPDATED STATUS
-**Agent 1 Status: SIMPLIFIED ARCHITECTURE**
-- Interactive CLI with slash commands
-- Session management (SQLite) - multiple chat windows
-- UserQuery creation and Agent 2 integration
-- **REMOVED**: Safety validation (now Agent 2's responsibility)
+**Agent 1 Status: CORE FEATURES COMPLETED**
+- [x] Interactive CLI with slash commands (/sessions, /new, /switch, /delete, /clear, /help, /exit)
+- [x] Session management (SQLite) - multiple chat windows with persistence
+- [x] SQLite storage layer with full CRUD operations (`sessions/storage.py`)
+- [x] Session manager with high-level API (`sessions/manager.py`) 
+- [x] Enhanced UserSession models with conversation history methods
+- [x] Rich console interface with tables, panels, and error handling
+- [x] Comprehensive unit tests (20+ test cases for storage, 15+ for manager)
+- [x] Session persistence and context carryover functionality
+- [ ] UserQuery integration point for Agent 2 (IN PROGRESS)
+- [ ] Fix Python version compatibility issues for running tests
+- [ ] Add CLI unit tests for interactive session management
+- [ ] Create Agent 2 integration stub/mock for testing
+- [ ] Add /rename and /export slash commands (mentioned in design but not implemented)
+- [x] **REMOVED**: Safety validation (now Agent 2's responsibility)
 
 **Agent 2 Focus:**
 - [ ] CrewAI agent configuration with gemini-2.0-flash
