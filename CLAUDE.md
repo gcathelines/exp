@@ -16,7 +16,7 @@
 - **LLM Provider**: Google VertexAI with Google GenAI client (gemini-2.0-flash)
 - **Data Source**: Google BigQuery (read-only access)
 - **CLI Framework**: Click/Typer
-- **Visualization**: Plotly and Matplotlib (both options available, decide later)
+- **Visualization**: Plotly (interactive web charts)
 - **Containerization**: Docker preferred
 
 ### Enhanced AI Agent Components
@@ -39,7 +39,7 @@
 - `google-cloud-bigquery` (BigQuery access)
 - `crewai` (latest version)
 - `click`, `typer` (CLI)
-- `plotly`, `matplotlib` (visualization options)
+- `plotly` (interactive visualization)
 - `pydantic`, `loguru`, `rich`, `pandas`, `numpy`
 - `chromadb` or `pinecone-client` (knowledge base)
 - `redis` (caching)
@@ -105,17 +105,18 @@ uv run mypy src/
 - Interactive CLI with slash commands (/sessions, /switch, /new)
 - Session management (SQLite) - multiple chat windows
 - Date validation and query safety (≤30 days)
-- BigQuery client implementation
-- Authentication system (Google Cloud)
+- User authentication and session management
+- CLI interface integration with Agent 2's CrewAI agents
 
-### Agent 2 (AI Core + Output)
+### Agent 2 (AI Core + BigQuery + Output)
 **Branches**: `feature/crew-agents`, `feature/output-system`
 **MVP Responsibilities**:
-- CrewAI agent configuration
+- CrewAI agent configuration with gemini-2.0-flash
 - Query generation agent (NL → SQL with date constraints)
-- Data analysis agent
-- Basic visualization (Plotly/Matplotlib)
-- Response formatting
+- BigQuery client implementation and query execution
+- Data analysis and insights generation
+- Plotly visualization generation
+- Response formatting and output system
 
 ### Phase 2 Enhancements (Post-MVP)
 **Shared responsibilities**:
@@ -141,10 +142,10 @@ uv run mypy src/
 
 ### Enhanced System Flow
 ```
-User Input → Session Manager → Knowledge Base Query → 
-CrewAI Agents → Date Validator (≤30 days) → Cache Check → 
-BigQuery → Safety Validation → Response + Confidence → 
-Session Storage → Observability Log → User
+User Input (CLI) → Session Manager (Agent 1) → 
+CrewAI Agents (Agent 2) → BigQuery Integration (Agent 2) → 
+Data Analysis + Visualization (Agent 2) → 
+Response + Confidence → Session Storage (Agent 1) → User
 ```
 
 ### Error Handling & Safety
@@ -165,8 +166,9 @@ Session Storage → Observability Log → User
 bi-chat-cli/
 ├── src/
 │   ├── cli/           # CLI interface (Agent 1)
-│   ├── agents/        # CrewAI agents (Agent 2)
-│   ├── data/          # BigQuery layer (Agent 1)
+│   ├── sessions/      # Session management (Agent 1) 
+│   ├── safety/        # Query safety validation (Agent 1)
+│   ├── agents/        # CrewAI agents + BigQuery (Agent 2)
 │   ├── output/        # Visualization (Agent 2)
 │   └── utils/         # Shared utilities
 ├── tests/             # Test suite
@@ -181,12 +183,14 @@ bi-chat-cli/
 - [ ] Interactive CLI with slash commands
 - [ ] Session management (SQLite) - multiple chat windows  
 - [ ] Date validation and query safety (≤30 days)
-- [ ] BigQuery client implementation
+- [ ] Integration with Agent 2's CrewAI workflow
 
 **Agent 2 Focus:**
-- [ ] CrewAI agent configuration
+- [ ] CrewAI agent configuration with gemini-2.0-flash
 - [ ] Natural language to SQL conversion (with date constraints)
-- [ ] Basic data visualization
+- [ ] BigQuery client implementation and query execution
+- [ ] Data analysis and insights generation
+- [ ] Plotly visualization generation
 - [ ] Response formatting
 
 **Shared:**

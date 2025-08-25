@@ -3,25 +3,66 @@
 ## Overview
 This guide explains how to coordinate 2 Claude Code agents working on the BI Chat CLI project simultaneously from different devices/sessions.
 
-## Pre-Setup Requirements
+## Quick Start Setup
 
-### Git Repository Setup
-1. Initialize the repository on the main device:
-   ```bash
-   git init bi-chat-cli
-   cd bi-chat-cli
-   git branch -M main
-   ```
+### Step 1: Initialize Project (Do Once)
+On your main device, run these commands:
 
-2. Create remote repository (GitHub/GitLab) and push:
-   ```bash
-   git remote add origin <repository-url>
-   git push -u origin main
-   ```
+```bash
+# Create project directory and initialize git
+mkdir bi-chat-cli
+cd bi-chat-cli
+git init
+git branch -M main
+
+# Create initial project structure
+mkdir -p src/{cli,agents,sessions,safety,output,utils}
+mkdir -p tests/{unit,integration,fixtures}
+mkdir -p config docs
+
+# Initialize uv project
+uv init --python 3.11
+uv add click typer crewai google-cloud-bigquery pydantic plotly loguru python-dotenv rich httpx pandas numpy
+uv add --dev pytest pytest-cov pytest-asyncio black ruff mypy pre-commit
+
+# Add documentation files to docs folder
+# (docs/PROJECT_PLAN.md and docs/MULTI_AGENT_WORKFLOW.md should already be created)
+
+# Create and push to remote repository
+git remote add origin <your-repository-url>
+git add .
+git commit -m "initial: project setup with uv and documentation"
+git push -u origin main
+```
 
 ## Agent Session Setup
 
-### Device 1 - Agent 1 (User Interface + Core Safety)
+### Step 2: Device 1 - Agent 1 Setup (CLI + Sessions + Safety)
+
+```bash
+# Navigate to project (if not already there)
+cd bi-chat-cli
+
+# Start a new Claude Code session and say:
+"I'm Agent 1 for the BI Chat CLI project. Please read CLAUDE.md and docs/PROJECT_PLAN.md to understand my role. I'm responsible for interactive CLI with slash commands, session management, and query safety. Start by creating the branch feature/cli-interface and begin implementing the interactive CLI system according to the project plan."
+```
+
+### Step 3: Device 2 - Agent 2 Setup (CrewAI + BigQuery + Output)
+
+```bash
+# Clone the repository
+git clone <your-repository-url>
+cd bi-chat-cli
+
+# Start a new Claude Code session and say:
+"I'm Agent 2 for the BI Chat CLI project. Please read CLAUDE.md and docs/PROJECT_PLAN.md to understand my role. I'm responsible for CrewAI agent system with gemini-2.0-flash, BigQuery integration, data analysis, Plotly visualization, and response formatting. Start by creating the branch feature/crew-agents and begin implementing the AI agents according to the project plan."
+```
+
+---
+
+## Detailed Agent Setup Instructions
+
+### Agent 1 (User Interface + Core Safety)
 **Location**: Current device
 **Branches**: `feature/cli-interface`, `feature/sessions`, `feature/safety`
 
@@ -38,14 +79,14 @@ This guide explains how to coordinate 2 Claude Code agents working on the BI Cha
    - Interactive CLI with slash commands (/sessions, /new, /switch)
    - Session management using SQLite (multiple chat windows)
    - Date validation and query safety (≤30 days)
-   - BigQuery client implementation
-   - Service account authentication
+   - User authentication and session management
+   - Integration with Agent 2's CrewAI workflow
    
    Start implementing the interactive CLI system on branch feature/cli-interface.
    Focus on MVP Phase 1 features first.
    ```
 
-### Device 2 - Agent 2 (AI Core + Output System)
+### Device 2 - Agent 2 (AI Core + BigQuery + Output System)
 **Location**: Different device/session
 **Branches**: `feature/crew-agents`, `feature/output-system`
 
@@ -65,8 +106,9 @@ This guide explains how to coordinate 2 Claude Code agents working on the BI Cha
    to understand your role. You're responsible for:
    - CrewAI agent configuration with gemini-2.0-flash
    - Query generation agent (NL → SQL with date constraints)
-   - Data analysis agent with basic insights
-   - Visualization system (Plotly/Matplotlib)
+   - BigQuery client implementation and query execution
+   - Data analysis agent with insights generation
+   - Plotly visualization system
    - Response formatting and presentation
    
    Start implementing the CrewAI agent system on branch feature/crew-agents.
