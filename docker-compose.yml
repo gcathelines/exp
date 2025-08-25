@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  bi-chat-cli:
+    build: .
+    container_name: bi-chat-cli
+    environment:
+      - ENVIRONMENT=development
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./config:/app/config
+      - ~/.config/gcloud:/root/.config/gcloud:ro  # Google Cloud credentials
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+  # Optional: Redis for caching (uncomment if needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: bi-chat-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+
+# volumes:
+#   redis_data:
