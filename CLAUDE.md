@@ -341,7 +341,6 @@ class ObservabilityLog(BaseModel):
 1. **CLAUDE.md** - This memory file (interface contracts, architecture decisions, workflows)
 2. **docs/PROJECT_PLAN.md** - Technical architecture and system design
 3. **docs/MULTI_AGENT_WORKFLOW.md** - Agent coordination and responsibilities
-4. **docs/CLAUDE_CODE_SETUP.md** - Setup instructions and commands
 
 **Examples of changes requiring doc updates**:
 - New dependencies or tech stack changes

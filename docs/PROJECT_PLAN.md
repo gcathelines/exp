@@ -108,8 +108,7 @@ bi-chat-cli/
 │   └── fixtures/              # Test data & mocks
 ├── docs/                      # Project documentation
 │   ├── PROJECT_PLAN.md
-│   ├── MULTI_AGENT_WORKFLOW.md
-│   └── CLAUDE_CODE_SETUP.md
+│   └── MULTI_AGENT_WORKFLOW.md
 ├── config/                    # Configuration files
 ├── CLAUDE.md                  # Claude Code memory
 ├── pyproject.toml            # uv package management
