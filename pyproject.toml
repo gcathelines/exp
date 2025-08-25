@@ -67,7 +67,7 @@ docs = [
 ]
 
 [project.scripts]
-bi-chat = "src.cli.main:app"
+bi-chat = "src.cli.main:main"
 
 [project.urls]
 Homepage = "https://github.com/yourusername/bi-chat-cli"
