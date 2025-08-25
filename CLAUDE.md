@@ -145,7 +145,7 @@ bi-chat-cli/
 - [ ] Token usage tracking
 
 ### Medium Priority
-- [ ] Define BigQuery schema requirements (clarify later)
+- [ ] Explore BigQuery schema: `data-314708.intermediate_transaction.user_transaction`
 - [ ] Docker configuration
 - [ ] Query caching
 - [ ] Enhanced error handling for MAX_TOKEN scenarios
@@ -184,9 +184,9 @@ class AgentResponse(BaseModel):
 
 ## Configuration
 - **Environment**: Use `.env` files
-- **Google Cloud**: Service account or Application Default Credentials
-- **VertexAI**: Configure project and region
-- **BigQuery**: Read-only dataset access
+- **Google Cloud**: Service account authentication at `/etc/creds/credentials_ai.json`
+- **VertexAI**: Project `ai-engineering-210825`, region `us-central1`
+- **BigQuery**: Project `data-314708`, dataset `intermediate_transaction`, table `user_transaction` (read-only)
 
 ## Common Workflows
 

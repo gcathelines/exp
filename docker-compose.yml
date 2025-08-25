@@ -12,7 +12,7 @@ services:
       - ./src:/app/src
       - ./tests:/app/tests
       - ./config:/app/config
-      - ~/.config/gcloud:/root/.config/gcloud:ro  # Google Cloud credentials
+      - /etc/creds/credentials_ai.json:/etc/creds/credentials_ai.json:ro  # Service account credentials
     stdin_open: true
     tty: true
     command: /bin/bash
