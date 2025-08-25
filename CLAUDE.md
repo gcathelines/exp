@@ -13,7 +13,7 @@
 - **Language**: Python 3.11+
 - **Package Manager**: `uv` (ALWAYS use uv, never pip)
 - **Agent Framework**: CrewAI (pin to latest version)
-- **LLM Provider**: Google VertexAI with Google GenAI client
+- **LLM Provider**: Google VertexAI with Google GenAI client (gemini-2.0-flash)
 - **Data Source**: Google BigQuery (read-only access)
 - **CLI Framework**: Click/Typer
 - **Visualization**: Plotly and Matplotlib (both options available, decide later)
