@@ -97,22 +97,25 @@ uv run mypy src/
 - **Commit format**: Conventional commits (`feat:`, `fix:`, `docs:`, etc.)
 - **PRs**: Create draft PRs, reviewer resolves conflicts
 
-## Agent Assignments (MVP-Prioritized)
+## Agent Assignments
 
-### Agent 1 (User Interface + Core Safety)
-**Branches**: `feature/cli-interface`, `feature/sessions`, `feature/safety`
-**MVP Responsibilities**:
+### Agent 1 (Pure CLI + Sessions)
+**Branches**: `feature/cli-interface`, `feature/sessions`
+**Current Responsibilities**:
 - Interactive CLI with slash commands (/sessions, /switch, /new)
-- Session management (SQLite) - multiple chat windows
-- Date validation and query safety (≤30 days)
-- User authentication and session management
+- Session management (SQLite) - multiple chat windows  
+- UserQuery creation and passing to Agent 2
 - CLI interface integration with Agent 2's CrewAI agents
+- **REMOVED**: All safety validation, BigQuery, data processing
 
-### Agent 2 (AI Core + BigQuery + Output)
+### Agent 2 (Complete Data Pipeline)
 **Branches**: `feature/crew-agents`, `feature/output-system`
-**MVP Responsibilities**:
+**Current Responsibilities**:
 - CrewAI agent configuration with gemini-2.0-flash
-- Query generation agent (NL → SQL with date constraints)
+- **EMBEDDED SAFETY**: All query validation within `generate_sql_query_tool`
+  - Date validation and query safety (≤30 days)
+  - SQL injection prevention
+  - Query limits and cost awareness
 - BigQuery client implementation and query execution
 - Data analysis and insights generation
 - Plotly visualization generation
@@ -134,26 +137,31 @@ uv run mypy src/
 
 ## Architecture Decisions
 
-### Enhanced CrewAI Agent System
-1. **Query Agent**: Natural language → SQL conversion with date filtering
-2. **Analysis Agent**: Data processing and insights with caching
-3. **Visualization Agent**: Charts and summaries
-4. **Safety Agent**: Query validation and date range enforcement (≤30 days)
+### Enhanced CrewAI Agent System (Agent 2 Owns All)
+1. **Query Agent**: Natural language → SQL conversion with EMBEDDED safety validation
+   - Date filtering (≤30 days) built into SQL generation
+   - SQL injection prevention
+   - Query cost awareness
+2. **Analysis Agent**: Data processing, BigQuery execution, and insights
+3. **Visualization Agent**: Charts and summaries  
+4. **Integration**: Agent 1 passes UserQuery, receives formatted response
 
-### Enhanced System Flow
+### Simplified System Flow
 ```
-User Input (CLI) → Session Manager (Agent 1) → 
-CrewAI Agents (Agent 2) → BigQuery Integration (Agent 2) → 
-Data Analysis + Visualization (Agent 2) → 
-Response + Confidence → Session Storage (Agent 1) → User
+User Input (CLI) → Session Manager (Agent 1) → UserQuery → 
+Agent 2 CrewAI Pipeline (with embedded safety) → 
+[Query Generation + Validation] → [BigQuery Execution] → 
+[Data Analysis] → [Visualization] → AgentResponse → 
+Session Storage (Agent 1) → User
 ```
 
-### Error Handling & Safety
+### Error Handling & Safety (Agent 2 Responsibility)
 - **VertexAI failures**: Fail on non-200 responses
 - **MAX_TOKEN errors**: Add TODO for handling (don't fail)
-- **BigQuery**: Read-only queries, mandatory date filtering
-- **Date Range Validation**: Auto-add WHERE clauses, reject queries >30 days
-- **Query Safety**: SQL injection prevention, confidence scoring
+- **BigQuery**: Read-only queries, mandatory date filtering (Agent 2's BigQuery client)
+- **Date Range Validation**: Auto-add WHERE clauses in `generate_sql_query_tool`
+- **Query Safety**: SQL injection prevention embedded in CrewAI tools
+- **Agent 1**: Only handles CLI errors and session storage errors
 
 ### Testing Strategy
 - **Unit tests**: Mock BigQuery/VertexAI with realistic data/responses
@@ -161,37 +169,45 @@ Response + Confidence → Session Storage (Agent 1) → User
 - **Coverage**: Target >90% but not enforced
 - **Mocking**: Use realistic responses close to actual API responses
 
-## Project Structure
+## Current Project Structure (Updated)
 ```
 bi-chat-cli/
 ├── src/
 │   ├── cli/           # CLI interface (Agent 1)
-│   ├── sessions/      # Session management (Agent 1) 
-│   ├── safety/        # Query safety validation (Agent 1)
-│   ├── agents/        # CrewAI agents + BigQuery (Agent 2)
+│   ├── sessions/      # Session management (Agent 1)
+│   ├── agents/        # CrewAI agents + BigQuery + Safety (Agent 2)
 │   ├── output/        # Visualization (Agent 2)
-│   └── utils/         # Shared utilities
+│   ├── utils/         # Shared models and utilities
+│   ├── cache/         # Phase 2: Redis caching (Agent 2)
+│   └── knowledge/     # Phase 2: ChromaDB (Agent 2)
 ├── tests/             # Test suite
 ├── docs/              # Documentation
 └── config/            # Configuration
+
+REMOVED DIRECTORIES:
+├── src/data/          # ❌ Moved to Agent 2's agents/tools.py
+└── src/safety/        # ❌ Embedded in Agent 2's CrewAI tools
 ```
 
 ## TODOs and Future Enhancements
 
-### Phase 1: MVP (Days 1-2)
-**Agent 1 Focus:**
-- [ ] Interactive CLI with slash commands
-- [ ] Session management (SQLite) - multiple chat windows  
-- [ ] Date validation and query safety (≤30 days)
-- [ ] Integration with Agent 2's CrewAI workflow
+### Phase 1: MVP (Days 1-2) - UPDATED STATUS
+**Agent 1 Status: SIMPLIFIED ARCHITECTURE**
+- Interactive CLI with slash commands
+- Session management (SQLite) - multiple chat windows
+- UserQuery creation and Agent 2 integration
+- **REMOVED**: Safety validation (now Agent 2's responsibility)
 
 **Agent 2 Focus:**
 - [ ] CrewAI agent configuration with gemini-2.0-flash
-- [ ] Natural language to SQL conversion (with date constraints)
-- [ ] BigQuery client implementation and query execution
-- [ ] Data analysis and insights generation
-- [ ] Plotly visualization generation
-- [ ] Response formatting
+- [ ] `generate_sql_query_tool` with EMBEDDED safety validation
+  - [ ] Date constraints (≤30 days)
+  - [ ] SQL injection prevention  
+  - [ ] Query cost awareness
+- [ ] `execute_bigquery_tool` with Agent 2's BigQuery client
+- [ ] `generate_insights_tool` for data analysis
+- [ ] `generate_plotly_chart_tool` for visualization
+- [ ] Response formatting and AgentResponse creation
 
 **Shared:**
 - [ ] Token usage tracking
