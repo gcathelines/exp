@@ -13,7 +13,7 @@
 - **LLM Provider**: Google VertexAI with Google GenAI client (gemini-2.0-flash)
 - **Data Source**: Google BigQuery (data-314708.intermediate_transaction.user_transaction)
 - **CLI Framework**: Click/Typer with interactive slash commands
-- **Visualization**: Plotly/Matplotlib
+- **Visualization**: Plotly (interactive charts)
 - **Session Management**: SQLite for persistent chat sessions
 - **Knowledge Base**: ChromaDB for user_transaction context
 - **Caching**: Redis for processed insights (>2s queries)
@@ -23,10 +23,10 @@
 ## Enhanced System Architecture
 
 ```
-User Input → Session Manager → Interactive CLI → Knowledge Base Query → 
-CrewAI Agents → Date Validator (≤30 days) → Cache Check → 
-BigQuery → Safety Validation → Response + Confidence → 
-Session Storage → Observability Log → User
+User Input (CLI) → Session Manager (Agent 1) → 
+CrewAI Agents (Agent 2) → BigQuery Integration (Agent 2) → 
+Data Analysis + Visualization (Agent 2) → 
+Response + Confidence → Session Storage (Agent 1) → User
 ```
 
 ### Components:
@@ -34,13 +34,13 @@ Session Storage → Observability Log → User
    ├── Slash commands (/sessions, /new, /switch)
    ├── Session management (SQLite)
    ├── Date validation and safety
-   └── BigQuery client integration
+   └── Integration with Agent 2's CrewAI workflow
 
-2. **Enhanced CrewAI Agent System** (Agent 2)
+2. **Enhanced CrewAI Agent System + BigQuery** (Agent 2)
    ├── Query Agent: NL → SQL with date constraints
-   ├── Analysis Agent: Data processing with caching
-   ├── Visualization Agent: Charts & summaries
-   └── Safety Agent: Query validation (≤30 days)
+   ├── Analysis Agent: Data processing with BigQuery integration
+   ├── Visualization Agent: Plotly charts & summaries
+   └── BigQuery Client: Query execution and data retrieval
 
 3. **Knowledge & Caching Layer** (Phase 2)
    ├── ChromaDB: user_transaction context
@@ -73,21 +73,17 @@ bi-chat-cli/
 │   │   ├── date_validator.py  # Date range enforcement (≤30 days)
 │   │   ├── sql_validator.py   # SQL injection prevention
 │   │   └── query_limits.py    # Safety constraints
-│   ├── data/                  # Agent 1: BigQuery integration
-│   │   ├── __init__.py
-│   │   ├── bigquery_client.py # BigQuery connection
-│   │   ├── schema_discovery.py # Table/schema introspection
-│   │   └── query_executor.py  # Query execution
-│   ├── agents/                # Agent 2: CrewAI agent system
+│   ├── agents/                # Agent 2: CrewAI agents + BigQuery integration
 │   │   ├── __init__.py
 │   │   ├── crew_setup.py      # CrewAI configuration
 │   │   ├── query_agent.py     # NL → SQL with date constraints
 │   │   ├── analysis_agent.py  # Data processing & insights
-│   │   └── viz_agent.py       # Visualization generation
+│   │   ├── viz_agent.py       # Visualization generation
+│   │   └── tools.py           # BigQuery client + CrewAI tools
 │   ├── output/                # Agent 2: Response formatting & visualization
 │   │   ├── __init__.py
 │   │   ├── formatters.py      # Response formatting
-│   │   ├── visualizations.py  # Chart generation (Plotly/Matplotlib)
+│   │   ├── visualizations.py  # Chart generation (Plotly)
 │   │   └── exporters.py       # Export utilities
 │   ├── knowledge/             # Phase 2: ChromaDB knowledge base
 │   │   ├── __init__.py
@@ -126,7 +122,7 @@ bi-chat-cli/
 ## Agent Assignments
 
 ### Agent 1 (User Interface + Core Safety)
-**Responsibility**: Interactive CLI + Sessions + Safety + BigQuery
+**Responsibility**: Interactive CLI + Sessions + Safety
 **Branches**: 
 - `feature/cli-interface`
 - `feature/sessions` 
@@ -136,17 +132,16 @@ bi-chat-cli/
 - Interactive CLI with slash commands (/sessions, /new, /switch)
 - Session management using SQLite (multiple chat windows)
 - Date validation and query safety (≤30 days)
-- BigQuery client implementation
-- Service account authentication
+- User authentication and session management
+- Integration with Agent 2's CrewAI workflow
 
 **Component Focus**:
 - `src/cli/` - Interactive CLI system
 - `src/sessions/` - SQLite session management
 - `src/safety/` - Date & query validation
-- `src/data/` - BigQuery integration
 
-### Agent 2 (AI Core + Output System)
-**Responsibility**: CrewAI Agents + Visualization + Response Formatting
+### Agent 2 (AI Core + BigQuery + Output System)
+**Responsibility**: CrewAI Agents + BigQuery Integration + Visualization + Response Formatting
 **Branches**: 
 - `feature/crew-agents`
 - `feature/output-system`
@@ -154,13 +149,14 @@ bi-chat-cli/
 **MVP Tasks (Phase 1)**:
 - CrewAI agent configuration with gemini-2.0-flash
 - Query generation agent (NL → SQL with date constraints)
-- Data analysis agent with basic insights
-- Visualization system (Plotly/Matplotlib)
+- BigQuery client implementation and query execution
+- Data analysis agent with insights generation
+- Plotly visualization system
 - Response formatting and presentation
 
 **Component Focus**:
-- `src/agents/` - CrewAI agent system
-- `src/output/` - Visualization & formatting
+- `src/agents/` - CrewAI agent system + BigQuery integration
+- `src/output/` - Plotly visualization & formatting
 
 ### Phase 2 Enhancements (Both Agents)
 **Shared Post-MVP Tasks**:
@@ -267,3 +263,142 @@ class UserQuery(BaseModel):
 - Environment variables for API keys
 - Virtual environment for dependencies
 - Development and production configuration files
+
+---
+
+## Agent 2 - CrewAI Tools Architecture Specification
+
+### **Tool Implementation Location**: `src/agents/tools.py`
+### **Total Tools**: 4 CrewAI @tool decorators + 4 utility functions
+### **BigQuery Integration**: Agent 2 owns completely
+
+### **Utility Functions (Normal Python functions)**
+
+#### `build_table_name(table_name: str) -> str`
+**Purpose**: Constructs full BigQuery table references  
+**Example**: `"user_transaction"` → `"data-314708.intermediate_transaction.user_transaction"`  
+**Uses**: Environment variables `GOOGLE_CLOUD_PROJECT`, `BIGQUERY_DATASET`
+
+#### `calculate_confidence_score(query_complexity: str, validation_passed: bool, data_quality_score: float) -> float`
+**Purpose**: Consistent confidence scoring (0.0-1.0) across all agents
+
+#### `format_error_response(error_type: str, error_message: str, context: dict) -> str`
+**Purpose**: Standardized user-friendly error messages with suggestions
+
+#### `validate_date_safety(sql_query: str) -> dict`
+**Purpose**: Validates SQL enforces ≤30 day date constraints  
+**Returns**: `{"is_safe": bool, "message": str, "suggested_fix": str}`
+
+### **CrewAI Tools (@tool decorators)**
+
+#### 1. `generate_sql_query_tool`
+**Agent**: Query Agent  
+**Purpose**: Convert natural language to safe BigQuery SQL  
+**Input**: `natural_language_query: str, table_name: str`  
+**Output**: `str` (enhanced BigQuery SQL with ORDER BY, LIMIT)  
+**Features**: 
+- Built-in date safety validation (≤30 days)
+- Automatic SQL enhancements (ORDER BY, LIMIT)
+- BigQuery syntax optimization
+
+#### 2. `execute_bigquery_tool` ⚠️ **AGENT 2 IMPLEMENTS BIGQUERY CLIENT**
+**Agent**: Analysis Agent  
+**Purpose**: Execute SQL queries against BigQuery using Agent 2's own BigQuery client  
+**Input**: `sql_query: str, table_name: str`  
+**Output**: `QueryResult` from `src/utils/models.py`  
+**Implementation**: **Agent 2 implements BigQuery client directly using `google-cloud-bigquery`**
+
+#### 3. `generate_insights_tool`  
+**Agent**: Analysis Agent  
+**Purpose**: Comprehensive data analysis and business insights generation  
+**Input**: `query_result: QueryResult, original_query: str`  
+**Output**: `str` (natural language business insights)  
+**Features**:
+- Statistical analysis (mean, median, sum, count, std dev)
+- Trend detection (patterns, seasonality, anomalies)  
+- Business insight generation in natural language
+
+#### 4. `generate_plotly_chart_tool`
+**Agent**: Visualization Agent  
+**Purpose**: Create appropriate Plotly visualizations  
+**Input**: `query_result: QueryResult, original_query: str, title: str`  
+**Output**: `dict` (Plotly JSON specification)  
+**Features**:
+- Automatic chart type recommendation based on data
+- Interactive Plotly chart generation
+- Optimized for web display
+
+### **Agent 2 BigQuery Integration**
+
+Agent 2 implements BigQuery client directly in `execute_bigquery_tool`:
+
+```python
+from google.cloud import bigquery
+import os
+from datetime import datetime
+
+@tool
+def execute_bigquery_tool(sql_query: str, table_name: str) -> QueryResult:
+    """Execute BigQuery SQL and return structured result"""
+    
+    # Initialize BigQuery client
+    project_id = os.getenv("GOOGLE_CLOUD_PROJECT", "data-314708")
+    credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    
+    client = bigquery.Client(project=project_id)
+    
+    # Build full table name
+    full_table_name = build_table_name(table_name)
+    
+    # Execute query with error handling
+    try:
+        start_time = datetime.now()
+        query_job = client.query(sql_query)
+        results = query_job.result()
+        execution_time = (datetime.now() - start_time).total_seconds()
+        
+        # Convert to QueryResult format
+        data = [dict(row) for row in results]
+        row_count = len(data)
+        
+        # Extract date range from data if available
+        date_range = extract_date_range(data)
+        
+        return QueryResult(
+            data=data,
+            metadata={"job_id": query_job.job_id, "bytes_processed": query_job.total_bytes_processed},
+            execution_time=execution_time,
+            row_count=row_count,
+            date_range=date_range
+        )
+        
+    except Exception as e:
+        # Convert BigQuery errors to user-friendly messages
+        error_message = format_error_response("BigQuery", str(e), {"query": sql_query})
+        raise Exception(error_message)
+```
+
+### **Tool Usage Flow**
+
+```python
+# Complete Agent 2 workflow (no Agent 1 dependencies):
+
+# 1. Query Agent generates SQL
+sql_query = generate_sql_query_tool(
+    "show me revenue trends for last week", 
+    "user_transaction"
+)
+
+# 2. Analysis Agent executes query (Agent 2's BigQuery client)
+query_result = execute_bigquery_tool(sql_query, "user_transaction")
+
+# 3. Analysis Agent generates insights
+insights = generate_insights_tool(query_result, "revenue trends for last week")
+
+# 4. Visualization Agent creates chart
+chart = generate_plotly_chart_tool(
+    query_result, 
+    "revenue trends for last week",
+    "Weekly Revenue Trend Analysis"
+)
+```
