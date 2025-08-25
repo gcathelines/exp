@@ -21,9 +21,9 @@ This guide explains how to coordinate 2 Claude Code agents working on the BI Cha
 
 ## Agent Session Setup
 
-### Device 1 - Agent 1 (CLI + Data Layer)
+### Device 1 - Agent 1 (User Interface + Core Safety)
 **Location**: Current device
-**Branches**: `feature/cli-interface`, `feature/data-layer`
+**Branches**: `feature/cli-interface`, `feature/sessions`, `feature/safety`
 
 #### Setup Steps:
 1. Clone/navigate to project directory
@@ -33,16 +33,19 @@ This guide explains how to coordinate 2 Claude Code agents working on the BI Cha
    ```
 3. Tell Claude Code Agent 1:
    ```
-   I'm Agent 1 working on the BI Chat CLI project. Please read PROJECT_PLAN.md 
-   and MULTI_AGENT_WORKFLOW.md to understand your role. You're responsible for:
-   - CLI interface implementation
-   - BigQuery data layer
-   - Authentication system
+   I'm Agent 1 working on the BI Chat CLI project. Please read CLAUDE.md and docs/PROJECT_PLAN.md 
+   to understand your role. You're responsible for:
+   - Interactive CLI with slash commands (/sessions, /new, /switch)
+   - Session management using SQLite (multiple chat windows)
+   - Date validation and query safety (≤30 days)
+   - BigQuery client implementation
+   - Service account authentication
    
-   Start by implementing the CLI structure on branch feature/cli-interface.
+   Start implementing the interactive CLI system on branch feature/cli-interface.
+   Focus on MVP Phase 1 features first.
    ```
 
-### Device 2 - Agent 2 (CrewAI + Output)
+### Device 2 - Agent 2 (AI Core + Output System)
 **Location**: Different device/session
 **Branches**: `feature/crew-agents`, `feature/output-system`
 
@@ -58,13 +61,16 @@ This guide explains how to coordinate 2 Claude Code agents working on the BI Cha
    ```
 3. Tell Claude Code Agent 2:
    ```
-   I'm Agent 2 working on the BI Chat CLI project. Please read PROJECT_PLAN.md 
-   and MULTI_AGENT_WORKFLOW.md to understand your role. You're responsible for:
-   - CrewAI agent implementation
-   - Output formatting and visualization
-   - Response generation system
+   I'm Agent 2 working on the BI Chat CLI project. Please read CLAUDE.md and docs/PROJECT_PLAN.md 
+   to understand your role. You're responsible for:
+   - CrewAI agent configuration with gemini-2.0-flash
+   - Query generation agent (NL → SQL with date constraints)
+   - Data analysis agent with basic insights
+   - Visualization system (Plotly/Matplotlib)
+   - Response formatting and presentation
    
-   Start by implementing the CrewAI agents on branch feature/crew-agents.
+   Start implementing the CrewAI agent system on branch feature/crew-agents.
+   Focus on MVP Phase 1 features first.
    ```
 
 ## Coordination Protocol

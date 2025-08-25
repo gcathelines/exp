@@ -39,7 +39,7 @@ git push -u origin main
 cd bi-chat-cli
 
 # Start a new Claude Code session and say:
-"I'm Agent 1 for the BI Chat CLI project. Please read docs/PROJECT_PLAN.md to understand my role. I'm responsible for CLI interface and data layer. Start by creating the branch feature/cli-interface and begin implementing the CLI structure according to the project plan."
+"I'm Agent 1 for the BI Chat CLI project. Please read CLAUDE.md and docs/PROJECT_PLAN.md to understand my role. I'm responsible for interactive CLI with slash commands, session management, query safety, and BigQuery integration. Start by creating the branch feature/cli-interface and begin implementing the interactive CLI system according to the project plan."
 ```
 
 ### Step 3: Device 2 - Agent 2 Setup (CrewAI + Output)
@@ -50,7 +50,7 @@ git clone <your-repository-url>
 cd bi-chat-cli
 
 # Start a new Claude Code session and say:
-"I'm Agent 2 for the BI Chat CLI project. Please read docs/PROJECT_PLAN.md to understand my role. I'm responsible for CrewAI agents and output system. Start by creating the branch feature/crew-agents and begin implementing the agent system according to the project plan."
+"I'm Agent 2 for the BI Chat CLI project. Please read CLAUDE.md and docs/PROJECT_PLAN.md to understand my role. I'm responsible for CrewAI agent system with gemini-2.0-flash, visualization, and response formatting. Start by creating the branch feature/crew-agents and begin implementing the AI agents according to the project plan."
 ```
 
 ## Detailed Instructions for Each Agent

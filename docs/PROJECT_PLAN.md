@@ -8,117 +8,166 @@
 
 ## Technical Stack
 - **Language**: Python 3.11+
-- **Agent Framework**: CrewAI
-- **Data Source**: Google BigQuery
-- **CLI Framework**: Click/Typer
-- **LLM Provider**: Anthropic Claude/OpenAI GPT
-- **Query Generation**: LangChain SQL Agent
+- **Package Manager**: uv (mandatory)
+- **Agent Framework**: CrewAI (latest)
+- **LLM Provider**: Google VertexAI with Google GenAI client (gemini-2.0-flash)
+- **Data Source**: Google BigQuery (data-314708.intermediate_transaction.user_transaction)
+- **CLI Framework**: Click/Typer with interactive slash commands
 - **Visualization**: Plotly/Matplotlib
-- **Token Tracking**: Custom middleware + LangSmith/Weights & Biases
-- **Auth**: JWT/API key system
-- **Logging**: Structured logging with loguru
+- **Session Management**: SQLite for persistent chat sessions
+- **Knowledge Base**: ChromaDB for user_transaction context
+- **Caching**: Redis for processed insights (>2s queries)
+- **Safety**: Date filtering (≤30 days) and query validation
+- **Auth**: Service account (/etc/creds/credentials_ai.json)
 
-## System Architecture
+## Enhanced System Architecture
 
 ```
-User Input → CLI Interface → CrewAI Agents → BigQuery → Response Generation → CLI Output
-
-1. CLI Entry Point
-   ├── Authentication/Authorization
-   ├── Input Parsing & Validation
-   └── Agent Orchestration
-
-2. CrewAI Agent System
-   ├── Query Agent: Natural language → SQL
-   ├── Analysis Agent: Data processing & insights
-   └── Visualization Agent: Charts & summaries
-
-3. Data Layer
-   ├── BigQuery Connection Manager
-   ├── Schema Discovery Service
-   └── Query Execution Engine
-
-4. Output Layer
-   ├── Text Summaries
-   ├── Chart Generation
-   └── Token Usage Reports
+User Input → Session Manager → Interactive CLI → Knowledge Base Query → 
+CrewAI Agents → Date Validator (≤30 days) → Cache Check → 
+BigQuery → Safety Validation → Response + Confidence → 
+Session Storage → Observability Log → User
 ```
+
+### Components:
+1. **Interactive CLI** (Agent 1)
+   ├── Slash commands (/sessions, /new, /switch)
+   ├── Session management (SQLite)
+   ├── Date validation and safety
+   └── BigQuery client integration
+
+2. **Enhanced CrewAI Agent System** (Agent 2)
+   ├── Query Agent: NL → SQL with date constraints
+   ├── Analysis Agent: Data processing with caching
+   ├── Visualization Agent: Charts & summaries
+   └── Safety Agent: Query validation (≤30 days)
+
+3. **Knowledge & Caching Layer** (Phase 2)
+   ├── ChromaDB: user_transaction context
+   ├── Redis: Processed insights cache
+   └── Observability: Agent decision logging
+
+4. **Safety & Reliability**
+   ├── Automatic date filtering (≤30 days)
+   ├── SQL injection prevention  
+   ├── Confidence scoring
+   └── Query cost awareness
 
 ## Project Structure
 
 ```
 bi-chat-cli/
 ├── src/
-│   ├── cli/                    # Branch: feature/cli-interface
+│   ├── cli/                    # Agent 1: Interactive CLI with slash commands
 │   │   ├── __init__.py
 │   │   ├── main.py            # CLI entry point
-│   │   ├── commands.py        # CLI command definitions
-│   │   └── auth.py            # Authentication middleware
-│   ├── agents/                # Branch: feature/crew-agents
+│   │   ├── commands.py        # Slash command handlers
+│   │   └── interactive.py     # Interactive session management
+│   ├── sessions/              # Agent 1: Session management
 │   │   ├── __init__.py
-│   │   ├── crew_setup.py      # CrewAI configuration
-│   │   ├── query_agent.py     # SQL generation agent
-│   │   ├── analysis_agent.py  # Data analysis agent
-│   │   └── viz_agent.py       # Visualization agent
-│   ├── data/                  # Branch: feature/data-layer
+│   │   ├── manager.py         # SQLite session operations
+│   │   ├── models.py          # Session data models
+│   │   └── storage.py         # Persistent storage layer
+│   ├── safety/                # Agent 1: Query validation & safety
+│   │   ├── __init__.py
+│   │   ├── date_validator.py  # Date range enforcement (≤30 days)
+│   │   ├── sql_validator.py   # SQL injection prevention
+│   │   └── query_limits.py    # Safety constraints
+│   ├── data/                  # Agent 1: BigQuery integration
 │   │   ├── __init__.py
 │   │   ├── bigquery_client.py # BigQuery connection
 │   │   ├── schema_discovery.py # Table/schema introspection
-│   │   └── query_executor.py  # Query execution & caching
-│   ├── output/                # Branch: feature/output-system
+│   │   └── query_executor.py  # Query execution
+│   ├── agents/                # Agent 2: CrewAI agent system
+│   │   ├── __init__.py
+│   │   ├── crew_setup.py      # CrewAI configuration
+│   │   ├── query_agent.py     # NL → SQL with date constraints
+│   │   ├── analysis_agent.py  # Data processing & insights
+│   │   └── viz_agent.py       # Visualization generation
+│   ├── output/                # Agent 2: Response formatting & visualization
 │   │   ├── __init__.py
 │   │   ├── formatters.py      # Response formatting
-│   │   ├── visualizations.py  # Chart generation
+│   │   ├── visualizations.py  # Chart generation (Plotly/Matplotlib)
 │   │   └── exporters.py       # Export utilities
-│   └── utils/                 # Branch: feature/utilities
+│   ├── knowledge/             # Phase 2: ChromaDB knowledge base
+│   │   ├── __init__.py
+│   │   ├── embeddings.py      # Vector embeddings
+│   │   ├── context_manager.py # Business context storage
+│   │   └── similarity.py      # Query similarity matching
+│   ├── cache/                 # Phase 2: Redis caching system
+│   │   ├── __init__.py
+│   │   ├── redis_client.py    # Redis connection
+│   │   ├── insights_cache.py  # Processed insights cache
+│   │   └── query_cache.py     # Query result caching
+│   └── utils/                 # Shared utilities
 │       ├── __init__.py
 │       ├── config.py          # Configuration management
-│       ├── logging.py         # Structured logging
-│       ├── token_tracker.py   # Token usage tracking
-│       └── security.py        # Access control
+│       ├── observability.py   # Agent decision logging
+│       └── token_tracker.py   # Token usage tracking
 ├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── fixtures/
-├── config/
-│   ├── development.yaml
-│   └── production.yaml
-├── requirements.txt
-├── pyproject.toml
+│   ├── unit/                  # Unit tests by component
+│   │   ├── cli/, sessions/, safety/, data/
+│   │   ├── agents/, output/, knowledge/, cache/
+│   ├── integration/           # Integration tests
+│   └── fixtures/              # Test data & mocks
+├── docs/                      # Project documentation
+│   ├── PROJECT_PLAN.md
+│   ├── MULTI_AGENT_WORKFLOW.md
+│   └── CLAUDE_CODE_SETUP.md
+├── config/                    # Configuration files
+├── CLAUDE.md                  # Claude Code memory
+├── pyproject.toml            # uv package management
+├── Dockerfile                # Container configuration
+├── docker-compose.yml        # Development environment
 ├── README.md
-└── .env.example
+└── .env.example              # Environment template
 ```
 
 ## Agent Assignments
 
-### Agent 1 (Claude Code Session #1)
-**Responsibility**: CLI Interface + Data Layer
+### Agent 1 (User Interface + Core Safety)
+**Responsibility**: Interactive CLI + Sessions + Safety + BigQuery
 **Branches**: 
 - `feature/cli-interface`
-- `feature/data-layer`
+- `feature/sessions` 
+- `feature/safety`
 
-**Tasks**:
-- CLI command structure using Click/Typer
-- Authentication and authorization system
+**MVP Tasks (Phase 1)**:
+- Interactive CLI with slash commands (/sessions, /new, /switch)
+- Session management using SQLite (multiple chat windows)
+- Date validation and query safety (≤30 days)
 - BigQuery client implementation
-- Schema discovery service
-- Query execution engine
-- Error handling and validation
+- Service account authentication
 
-### Agent 2 (Claude Code Session #2)
-**Responsibility**: CrewAI Agents + Output System
+**Component Focus**:
+- `src/cli/` - Interactive CLI system
+- `src/sessions/` - SQLite session management
+- `src/safety/` - Date & query validation
+- `src/data/` - BigQuery integration
+
+### Agent 2 (AI Core + Output System)
+**Responsibility**: CrewAI Agents + Visualization + Response Formatting
 **Branches**: 
 - `feature/crew-agents`
 - `feature/output-system`
 
-**Tasks**:
-- CrewAI agent configuration
-- Query generation agent (NL → SQL)
-- Data analysis agent
-- Visualization agent
-- Response formatting
-- Chart generation with Plotly
-- Export utilities
+**MVP Tasks (Phase 1)**:
+- CrewAI agent configuration with gemini-2.0-flash
+- Query generation agent (NL → SQL with date constraints)
+- Data analysis agent with basic insights
+- Visualization system (Plotly/Matplotlib)
+- Response formatting and presentation
+
+**Component Focus**:
+- `src/agents/` - CrewAI agent system
+- `src/output/` - Visualization & formatting
+
+### Phase 2 Enhancements (Both Agents)
+**Shared Post-MVP Tasks**:
+- Knowledge base implementation (ChromaDB) - `src/knowledge/`
+- Processed insights caching (Redis) - `src/cache/` 
+- Enhanced observability logging - `src/utils/observability.py`
+- Advanced safety and confidence scoring
 
 ### Reviewer Developer
 **Responsibility**: Integration, Testing, Code Review
