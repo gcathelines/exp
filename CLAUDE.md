@@ -311,7 +311,8 @@ class ObservabilityLog(BaseModel):
 2. Format code: `uv run ruff format .`
 3. Lint and fix: `uv run ruff check . --fix`
 4. Type check: `uv run mypy src/`
-5. Create draft PR with description
+5. **Update documentation**: If making technical/architectural changes, update both `CLAUDE.md` and `docs/` files
+6. Create draft PR with description
 
 ### Integration Points
 - Sync every 4-6 hours between agents
@@ -330,3 +331,25 @@ class ObservabilityLog(BaseModel):
 - VertexAI is the primary LLM provider
 - Docker is preferred for deployment
 - Focus on MVP features first, nice-to-have items are low priority
+
+## Documentation Maintenance
+**CRITICAL**: When making technical/architectural changes, always update:
+1. **CLAUDE.md** - This memory file (interface contracts, architecture decisions, workflows)
+2. **docs/PROJECT_PLAN.md** - Technical architecture and system design
+3. **docs/MULTI_AGENT_WORKFLOW.md** - Agent coordination and responsibilities
+4. **docs/CLAUDE_CODE_SETUP.md** - Setup instructions and commands
+
+**Examples of changes requiring doc updates**:
+- New dependencies or tech stack changes
+- Interface contract modifications (data models, API changes)
+- Agent responsibility changes
+- New development commands or workflows
+- Architecture flow changes
+- Safety/security requirement updates
+- Environment variable or configuration changes
+
+**Why this matters**: 
+- Ensures consistency across multi-agent development
+- Prevents context loss between Claude Code sessions
+- Maintains accurate project knowledge for new team members
+- Keeps setup instructions current and functional
