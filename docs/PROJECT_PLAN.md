@@ -20,27 +20,46 @@
 - **Safety**: Date filtering (≤30 days) and query validation
 - **Auth**: Service account (/etc/creds/credentials_ai.json)
 
-## Enhanced System Architecture
+## Enhanced 4-Agent System Architecture
 
 ```
-User Input (CLI) → Session Manager (Agent 1) → 
-CrewAI Agents (Agent 2) → BigQuery Integration (Agent 2) → 
-Data Analysis + Visualization (Agent 2) → 
-Response + Confidence → Session Storage (Agent 1) → User
+User Input (CLI) → Session Manager (Agent 1) → UserQuery → 
+Supervisor Agent (Agent 2) → LLM Intent Classification → User Confirmation → 
+
+DYNAMIC ROUTING:
+├── DIRECT: Query Agent → Supervisor (formatting) → Response
+├── ANALYSIS: Query Agent → Analysis Agent → Supervisor (formatting) → Response  
+└── FULL: Query Agent → Analysis Agent → Visualization Agent → Supervisor (formatting) → Response
+
+→ Session Storage (Agent 1) → User
 ```
 
 ### Components:
 1. **Interactive CLI** (Agent 1)
    ├── Slash commands (/sessions, /new, /switch)
    ├── Session management (SQLite)
-   ├── Date validation and safety
-   └── Integration with Agent 2's CrewAI workflow
+   ├── UserQuery creation and passing to Agent 2
+   └── Response display and session storage
 
-2. **Enhanced CrewAI Agent System + BigQuery** (Agent 2)
-   ├── Query Agent: NL → SQL with date constraints
-   ├── Analysis Agent: Data processing with BigQuery integration
-   ├── Visualization Agent: Plotly charts & summaries
-   └── BigQuery Client: Query execution and data retrieval
+2. **4-Agent CrewAI System** (Agent 2)
+   ├── **Supervisor Agent**: Intent routing + user confirmations + response formatting
+   ├── **Query Agent**: NL → SQL + BigQuery execution (with embedded safety)
+   ├── **Analysis Agent**: LLM-powered business insights generation
+   └── **Visualization Agent**: Plotly charts + data presentation
+
+### User Control Features:
+- **Natural Language Confirmations**: System asks user preferences in conversational style
+- **Session Context**: Remember user choices within current session
+- **Smart Recommendations**: Analysis Agent does quick data exploration (≤30 seconds) for intelligent suggestions
+- **Multiple Options**: For ambiguous queries, provide data-driven options based on actual patterns
+- **Strict Control**: Always confirm before expensive operations
+
+### Quick Exploration System:
+For ambiguous queries like "what's interesting about our data?", the system performs:
+1. **Schema Discovery** (5s): `DESCRIBE table` to understand columns dynamically
+2. **Pattern Detection** (20s): 2-3 targeted queries based on discovered schema
+3. **LLM Analysis** (5s): VertexAI/Gemini identifies business patterns
+4. **Smart Options**: "Found revenue spike +25%, mobile shift, larger transactions - which interests you?"
 
 3. **Knowledge & Caching Layer** (Phase 2)
    ├── ChromaDB: user_transaction context
@@ -73,13 +92,19 @@ bi-chat-cli/
 │   │   ├── date_validator.py  # Date range enforcement (≤30 days)
 │   │   ├── sql_validator.py   # SQL injection prevention
 │   │   └── query_limits.py    # Safety constraints
-│   ├── agents/                # Agent 2: CrewAI agents + BigQuery integration
+│   ├── agents/                # Agent 2: 4-Agent CrewAI System
 │   │   ├── __init__.py
-│   │   ├── crew_setup.py      # CrewAI configuration
-│   │   ├── query_agent.py     # NL → SQL with date constraints
-│   │   ├── analysis_agent.py  # Data processing & insights
-│   │   ├── viz_agent.py       # Visualization generation
-│   │   └── tools.py           # BigQuery client + CrewAI tools
+│   │   ├── crew_setup.py      # CrewAI crew configuration (4 agents)
+│   │   ├── supervisor_agent.py # Intent routing + user confirmations + formatting
+│   │   ├── query_agent.py     # NL → SQL + BigQuery execution
+│   │   ├── analysis_agent.py  # LLM-powered business insights
+│   │   ├── viz_agent.py       # Plotly charts + data presentation
+│   │   └── tools/             # 4 CrewAI tools (separated by functionality)
+│   │       ├── __init__.py    # Tool exports
+│   │       ├── query.py       # SQL generation + validation
+│   │       ├── bigquery.py    # BigQuery client + execution
+│   │       ├── analysis.py    # LLM insights generation
+│   │       └── visualization.py # Plotly chart creation
 │   ├── output/                # Agent 2: Response formatting & visualization
 │   │   ├── __init__.py
 │   │   ├── formatters.py      # Response formatting
@@ -138,27 +163,32 @@ bi-chat-cli/
 - `src/sessions/` - SQLite session management
 - `src/utils/models.py` - Shared interface contracts
 
-### Agent 2 (Complete Data Pipeline) 
-**Responsibility**: CrewAI + Safety + BigQuery + Analysis + Visualization
+### Agent 2 (4-Agent CrewAI System) 
+**Responsibility**: Supervisor + Query + Analysis + Visualization Agents
 **Branches**: 
-- `feature/crew-agents`  IN PROGRESS
-- `feature/output-system` ⏳ PENDING
+- `feature/crew-agents` - 4-agent implementation
+- `feature/output-system` - Response formatting utilities
 
 **Current Tasks (Phase 1)**:
-- CrewAI agent configuration with gemini-2.0-flash
-- **EMBEDDED SAFETY** within `generate_sql_query_tool`:
-  - Date validation and query safety (≤30 days)
-  - SQL injection prevention
-  - Query cost awareness
-- BigQuery client implementation in `execute_bigquery_tool`
-- Data analysis agent with insights generation
-- Plotly visualization system
-- Response formatting and AgentResponse creation
+- [ ] **Supervisor Agent**: LLM-powered intent classification and routing
+  - [ ] Natural language user confirmations  
+  - [ ] Session context management
+  - [ ] Dynamic workflow routing (DIRECT/ANALYSIS/FULL)
+  - [ ] Final response formatting
+- [ ] **Query Agent**: Uses existing tools for SQL + BigQuery
+  - [ ] Integration with `generate_sql_query_tool` and `execute_bigquery_tool`
+  - [ ] Embedded safety validation (≤30 days, SQL injection prevention)
+- [ ] **Analysis Agent**: LLM-powered business insights 
+  - [ ] Update `generate_insights_tool` to use VertexAI/Gemini instead of pandas rules
+  - [ ] Context-aware data interpretation and recommendations
+- [ ] **Visualization Agent**: Chart creation and data presentation
+  - [ ] Integration with `generate_plotly_chart_tool`
+  - [ ] Automatic chart type selection
 
 **Component Focus**:
-- `src/agents/tools.py` - 4 CrewAI tools with embedded safety validation
-- `src/output/` - Plotly visualization & formatting
-- **INHERITED**: All safety and BigQuery responsibilities from Agent 1
+- `src/agents/` - 4 individual CrewAI agents + crew configuration
+- `src/agents/tools/` - 4 CrewAI tools (already implemented)
+- `src/output/` - Response formatting utilities
 
 ### Phase 2 Enhancements (Both Agents)
 **Shared Post-MVP Tasks**:
@@ -315,13 +345,14 @@ class UserQuery(BaseModel):
 
 #### 3. `generate_insights_tool`  
 **Agent**: Analysis Agent  
-**Purpose**: Comprehensive data analysis and business insights generation  
+**Purpose**: LLM-powered business insights generation with dynamic schema exploration
 **Input**: `query_result: QueryResult, original_query: str`  
-**Output**: `str` (natural language business insights)  
+**Output**: `str` (natural language business insights + exploration capabilities)  
 **Features**:
-- Statistical analysis (mean, median, sum, count, std dev)
-- Trend detection (patterns, seasonality, anomalies)  
-- Business insight generation in natural language
+- **Quick Exploration Mode**: Schema-dynamic data discovery (≤30 seconds)
+- **LLM-Powered Analysis**: VertexAI/Gemini for intelligent pattern detection  
+- **Business Context**: Schema-to-business mapping (revenue, customers, etc.)
+- **Contextual Insights**: Data interpretation with business recommendations
 
 #### 4. `generate_plotly_chart_tool`
 **Agent**: Visualization Agent  
