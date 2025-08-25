@@ -121,42 +121,45 @@ bi-chat-cli/
 
 ## Agent Assignments
 
-### Agent 1 (User Interface + Core Safety)
-**Responsibility**: Interactive CLI + Sessions + Safety
+### Agent 1 (Pure CLI + Sessions)
+**Responsibility**: Interactive CLI + Session Management ONLY
 **Branches**: 
-- `feature/cli-interface`
-- `feature/sessions` 
-- `feature/safety`
+- `feature/cli-interface` (simplified architecture)
+- `feature/sessions` (ready for integration)
 
-**MVP Tasks (Phase 1)**:
+**Current Status**:
 - Interactive CLI with slash commands (/sessions, /new, /switch)
 - Session management using SQLite (multiple chat windows)
-- Date validation and query safety (≤30 days)
-- User authentication and session management
-- Integration with Agent 2's CrewAI workflow
+- UserQuery creation and passing to Agent 2
+- Integration points for Agent 2's CrewAI workflow
+- **REMOVED**: All safety validation, BigQuery, data processing
 
 **Component Focus**:
 - `src/cli/` - Interactive CLI system
 - `src/sessions/` - SQLite session management
-- `src/safety/` - Date & query validation
+- `src/utils/models.py` - Shared interface contracts
 
-### Agent 2 (AI Core + BigQuery + Output System)
-**Responsibility**: CrewAI Agents + BigQuery Integration + Visualization + Response Formatting
+### Agent 2 (Complete Data Pipeline) 
+**Responsibility**: CrewAI + Safety + BigQuery + Analysis + Visualization
 **Branches**: 
-- `feature/crew-agents`
-- `feature/output-system`
+- `feature/crew-agents`  IN PROGRESS
+- `feature/output-system` ⏳ PENDING
 
-**MVP Tasks (Phase 1)**:
+**Current Tasks (Phase 1)**:
 - CrewAI agent configuration with gemini-2.0-flash
-- Query generation agent (NL → SQL with date constraints)
-- BigQuery client implementation and query execution
+- **EMBEDDED SAFETY** within `generate_sql_query_tool`:
+  - Date validation and query safety (≤30 days)
+  - SQL injection prevention
+  - Query cost awareness
+- BigQuery client implementation in `execute_bigquery_tool`
 - Data analysis agent with insights generation
 - Plotly visualization system
-- Response formatting and presentation
+- Response formatting and AgentResponse creation
 
 **Component Focus**:
-- `src/agents/` - CrewAI agent system + BigQuery integration
+- `src/agents/tools.py` - 4 CrewAI tools with embedded safety validation
 - `src/output/` - Plotly visualization & formatting
+- **INHERITED**: All safety and BigQuery responsibilities from Agent 1
 
 ### Phase 2 Enhancements (Both Agents)
 **Shared Post-MVP Tasks**:
@@ -293,15 +296,18 @@ class UserQuery(BaseModel):
 
 #### 1. `generate_sql_query_tool`
 **Agent**: Query Agent  
-**Purpose**: Convert natural language to safe BigQuery SQL  
+**Purpose**: Convert natural language to safe BigQuery SQL with ALL safety checks  
 **Input**: `natural_language_query: str, table_name: str`  
 **Output**: `str` (enhanced BigQuery SQL with ORDER BY, LIMIT)  
-**Features**: 
-- Built-in date safety validation (≤30 days)
-- Automatic SQL enhancements (ORDER BY, LIMIT)
-- BigQuery syntax optimization
+**CRITICAL - EMBEDDED SAFETY FEATURES**: 
+- ✅ **Date safety validation (≤30 days)** - MOVED FROM AGENT 1
+- ✅ **SQL injection prevention** - MOVED FROM AGENT 1  
+- ✅ **Query cost awareness** - MOVED FROM AGENT 1
+- ✅ **Automatic SQL enhancements** (ORDER BY, LIMIT)
+- ✅ **BigQuery syntax optimization**
+- ✅ **Error-friendly responses** with suggestions
 
-#### 2. `execute_bigquery_tool` ⚠️ **AGENT 2 IMPLEMENTS BIGQUERY CLIENT**
+#### 2. `execute_bigquery_tool`
 **Agent**: Analysis Agent  
 **Purpose**: Execute SQL queries against BigQuery using Agent 2's own BigQuery client  
 **Input**: `sql_query: str, table_name: str`  
